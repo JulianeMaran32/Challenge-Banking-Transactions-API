@@ -1,0 +1,261 @@
+openapi: 3.0.0
+info:
+  title: Banking Transactions API
+  description: >
+    API RESTful para gerenciar lançamentos de débito e crédito em contas bancárias.  
+    Permite processar múltiplos lançamentos em uma única requisição e obter o saldo atual de uma conta.  
+    A implementação deve garantir atomicidade e consistência para suportar requisições concorrentes (thread-safe).
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Servidor de Desenvolvimento
+paths:
+  /transactions:
+    post:
+      summary: Processar múltiplos lançamentos bancários
+      operationId: processTransactions
+      tags:
+        - transactions
+      description: >
+        Realiza um conjunto de lançamentos (débito e/ou crédito) em uma ou mais contas.
+        A operação deve ser atômica por requisição: todos os lançamentos são aplicados ou nenhum é.
+        A API deve garantir a consistência dos saldos mesmo sob alta concorrência.
+      requestBody:
+        description: Lista de lançamentos a serem processados.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessTransactionsRequest'
+            examples:
+              processTransactionsRequestExample:
+                summary: Exemplo de requisição com múltiplos lançamentos
+                value:
+                  transactions:
+                    - accountId: "conta123"
+                      type: "DEBIT"
+                      amount: 50.75
+                    - accountId: "conta456"
+                      type: "CREDIT"
+                      amount: 100.00
+                    - accountId: "conta123"
+                      type: "CREDIT"
+                      amount: 25.00
+      responses:
+        '201':
+          description: Lançamentos processados com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessTransactionsResponse'
+              examples:
+                processTransactionsSuccessResponseExample:
+                  summary: Exemplo de resposta de sucesso
+                  value:
+                    message: "Lançamentos processados com sucesso."
+                    # Pode-se adicionar detalhes dos resultados individuais se necessário
+                    # results:
+                    #   - accountId: "conta123"
+                    #     status: "SUCCESS"
+                    #     newBalance: 100.25 # Exemplo: Saldo após lançamentos
+                    #   - accountId: "conta456"
+                    #     status: "SUCCESS"
+                    #     newBalance: 500.00 # Exemplo
+        '400':
+          description: Requisição inválida (dados mal formatados, valores negativos, tipo inválido, etc.).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                errorBadRequestExample:
+                  summary: Exemplo de resposta de erro 400
+                  value:
+                    statusCode: 400
+                    error: "Bad Request"
+                    message: "Valor do lançamento deve ser positivo: -10.00"
+        '404':
+          description: Conta(s) não encontrada(s).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                errorNotFoundExample:
+                  summary: Exemplo de resposta de erro 404
+                  value:
+                    statusCode: 404
+                    error: "Not Found"
+                    message: "Conta com ID 'contaXYZ' não encontrada."
+        '409':
+          description: "Conflito (ex: saldo insuficiente para débito)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                errorConflictExample:
+                  summary: Exemplo de resposta de erro 409
+                  value:
+                    statusCode: 409
+                    error: "Conflict"
+                    message: "Saldo insuficiente na conta 'conta123' para débito de 150.00."
+        '500':
+          description: Erro interno do servidor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                errorInternalErrorExample:
+                  summary: Exemplo de resposta de erro 500
+                  value:
+                    statusCode: 500
+                    error: "Internal Server Error"
+                    message: "Ocorreu um erro interno ao processar a requisição."
+
+  /accounts/{accountId}/balance:
+    get:
+      summary: Obter saldo da conta
+      operationId: getAccountBalance
+      tags:
+        - accounts
+      description: Retorna o saldo atual de uma conta específica.
+      parameters:
+        - name: accountId
+          in: path
+          description: ID da conta para buscar o saldo.
+          required: true
+          schema:
+            type: string
+            description: "Identificador único da conta (ex: UUID, número da conta)."
+            example: "conta123"
+      responses:
+        '200':
+          description: Saldo da conta retornado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountBalance'
+              examples:
+                getAccountBalanceSuccessResponseExample:
+                  summary: Exemplo de resposta de sucesso
+                  value:
+                    accountId: "conta123"
+                    balance: 1500.75
+        '404':
+          description: Conta não encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                errorNotFoundExample: # Reutiliza o exemplo de erro 404
+                  summary: Exemplo de resposta de erro 404 (Conta não encontrada)
+                  value:
+                    statusCode: 404
+                    error: "Not Found"
+                    message: "Conta com ID 'contaXYZ' não encontrada."
+        '500':
+          description: Erro interno do servidor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                errorInternalErrorExample: # Reutiliza o exemplo de erro 500
+                  summary: Exemplo de resposta de erro 500
+                  value:
+                    statusCode: 500
+                    error: "Internal Server Error"
+                    message: "Ocorreu um erro interno ao processar a requisição."
+
+components:
+  schemas:
+    TransactionRequest:
+      type: object
+      required:
+        - accountId
+        - type
+        - amount
+      properties:
+        accountId:
+          type: string
+          description: Identificador único da conta onde o lançamento será aplicado.
+          example: "conta123"
+        type:
+          type: string
+          description: Tipo do lançamento (CRÉDITO ou DÉBITO).
+          enum:
+            - CREDIT
+            - DEBIT
+          example: "DEBIT"
+        amount:
+          type: number
+          format: float # Use float ou double dependendo da precisão necessária
+          description: Valor do lançamento. Deve ser um número positivo.
+          minimum: 0.01
+          example: 50.75
+      description: Representa um único lançamento (débito ou crédito) a ser aplicado em uma conta.
+
+    ProcessTransactionsRequest:
+      type: object
+      required:
+        - transactions
+      properties:
+        transactions:
+          type: array
+          description: Lista de lançamentos a serem processados em conjunto.
+          items:
+            $ref: '#/components/schemas/TransactionRequest'
+          minItems: 1 # Uma requisição deve ter pelo menos um lançamento
+      description: Estrutura da requisição para processar múltiplos lançamentos em uma única operação.
+
+    ProcessTransactionsResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Mensagem de confirmação indicando que os lançamentos foram processados.
+          example: "Lançamentos processados com sucesso."
+      description: Estrutura da resposta de sucesso para a operação de processar lançamentos.
+
+    AccountBalance:
+      type: object
+      required:
+        - accountId
+        - balance
+      properties:
+        accountId:
+          type: string
+          description: Identificador único da conta.
+          example: "conta123"
+        balance:
+          type: number
+          format: float # Use float ou double
+          description: Saldo atual da conta.
+          example: 1500.75
+      description: Estrutura da resposta para obter o saldo de uma conta.
+
+    ErrorResponse:
+      type: object
+      required:
+        - statusCode
+        - error
+        - message
+      properties:
+        statusCode:
+          type: integer
+          description: Código de status HTTP do erro.
+          example: 400
+        error:
+          type: string
+          description: Descrição curta do tipo de erro HTTP.
+          example: "Bad Request"
+        message:
+          type: string
+          description: Mensagem detalhada descrevendo o erro.
+          example: "Ocorreu um erro ao processar a requisição."
+      description: Estrutura padrão para respostas de erro.
