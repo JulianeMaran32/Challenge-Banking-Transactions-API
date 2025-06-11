@@ -1,0 +1,200 @@
+# Banking Transactions API Development Checklist
+
+Este arquivo serve como um checklist abrangente dos requisitos e tarefas a serem cumpridas para o desenvolvimento
+da API de Lançamentos Bancários, conforme especificado no Desafio 6728457.
+
+## Configuração Inicial e Estrutura
+
+- [X] Criar projeto Spring Boot usando Spring Initializr com as dependências especificadas:
+    - [X] Spring Web
+    - [X] Spring Configuration Processor
+    - [X] Validation
+    - [X] Lombok
+    - [X] Spring Data JPA
+    - [X] H2 Database
+    - [X] Spring Boot Actuator
+    - [X] groupId: `juhmaran.challenge`
+    - [X] artifactId: `banking-transactions-api`
+    - [X] Java Version: 21
+    - [X] Spring Boot Version: 3.x (última stable >= 3.5.0)
+    - [X] Packaging: Jar
+    - [X] Project: Maven
+- [X] Definir a estrutura inicial de pacotes (controller, service, repository, entity, dto, enums, exception, config).
+- [X] Configurar `application.yml` para H2 database, JPA, logging e Actuator.
+
+## Domínio e Modelo de Dados
+
+TODO
+    - [ ] Criar entidade `Account` com:
+        - [X] ID (`Long`, autogerado)
+        - [X] Número da conta (`String`, único, não nulo)
+        - [X] Saldo (`BigDecimal`, não nulo)
+        - [X] Lista de Transações (relacionamento One-to-Many, Lazy loading)
+        - [X] Anotações JPA (`@Entity`, `@Table`, `@Id`, `@GeneratedValue`, `@Column`, `@OneToMany`)
+        - [X] Anotações Lombok (`@Data`, `@NoArgsConstructor`, `@AllArgsConstructor`, `@ToString(exclude)`,
+            `@EqualsAndHashCode(exclude)`)
+        - [ ] Métodos para `deposit` e `withdraw` (lógica básica interna, thread-safety garantida externamente).
+        - [X] Metodo para adicionar transação.
+
+- [X] Criar entidade `Transaction` com:
+    - [X] ID (`Long`, autogerado)
+    - [X] Valor (`BigDecimal`, não nulo)
+    - [X] Tipo (`Enum: TransactionType`, não nulo)
+    - [X] Timestamp (`LocalDateTime`, não nulo, gerado na criação)
+    - [X] Conta associada (relacionamento Many-to-One, Lazy loading)
+    - [X] Anotações JPA (`@Entity`, `@Table`, `@Id`, `@GeneratedValue`, `@Column`, `@Enumerated`,
+        `@ManyToOne`, `@JoinColumn`)
+    - [X] Anotações Lombok (`@Data`, `@NoArgsConstructor`, `@AllArgsConstructor`)
+- [X] Criar enum `TransactionType` (`DEBIT`, `CREDIT`).
+- [X] Utilizar `BigDecimal` para todos os valores monetários.
+
+## Acesso a Dados (Repositórios)
+
+- [X] Criar interface `AccountRepository` estendendo `JpaRepository`.
+- [X] Adicionar metodo `findByAccountNumber(String accountNumber)` retornando `Optional<Account>`.
+- [X] Adicionar metodo `existsByAccountNumber(String accountNumber)` retornando `boolean`.
+- [X] Adicionar metodo `findAccountWithLockByAccountNumber(String accountNumber)` utilizando
+    `@Lock(LockModeType.PESSIMISTIC_WRITE)` para garantir bloqueio na busca.
+- [X] Criar interface `TransactionRepository` estendendo `JpaRepository`.
+
+## Lógica de Negócio (Serviços)
+
+- [X] Criar interface `AccountService` com métodos:
+    - [X] `TransactionBatchResponse performTransactions(String accountNumber, List<TransactionRequest> transactions)`
+    - [X] `AccountBalanceResponse getBalance(String accountNumber)`
+    - [X] `String createAccount(String accountNumber)` (Auxiliar)
+    - [X] `String createAccount(String accountNumber, BigDecimal initialBalance)` (Auxiliar)
+- [X] Criar implementação `AccountServiceImpl` implementando `AccountService`.
+- [X] Injetar `AccountRepository` e `TransactionRepository`.
+
+TODO
+    - [ ] Implementar `performTransactions`:
+        - [ ] Buscar a conta pelo número COM bloqueio pessimista.
+        - [ ] Validar se a conta existe (lançar `AccountNotFoundException`).
+        - [ ] Iterar sobre a lista de `TransactionRequest`.
+        - [ ] Para cada débito, verificar saldo suficiente ANTES de subtrair (lançar `InsufficientFundsException`).
+        - [ ] Atualizar o saldo localmente durante a iteração.
+        - [ ] Criar entidade `Transaction` para cada requisição válida.
+        - [ ] Associar a transação à conta.
+        - [ ] Atualizar o saldo final na entidade `Account`.
+        - [ ] Utilizar `@Transactional` para garantir atomicidade do lote.
+        - [ ] Lidar com exceções e garantir rollback automático em caso de falha (principalmente saldo insuficiente).
+        - [ ] Construir e retornar `TransactionBatchResponse`.
+    - [ ] Implementar `getBalance`:
+        - [ ] Buscar a conta pelo número SEM bloqueio.
+        - [ ] Validar se a conta existe (lançar `AccountNotFoundException`).
+        - [ ] Construir e retornar `AccountBalanceResponse`.
+        - [ ] Utilizar `@Transactional(readOnly = true)`.
+    - [ ] Implementar `createAccount`:
+        - [ ] Verificar se a conta já existe (lançar exceção se existir).
+        - [ ] Criar nova entidade `Account` com saldo inicial.
+        - [ ] Salvar a nova conta no repositório.
+        - [ ] Utilizar `@Transactional`.
+
+## Camada de API (Controllers e DTOs)
+
+TODO
+    - [X] Criar Controller `AccountController`.
+    - [X] Mapear a URL base `/api/v1/accounts`.
+    - [X] Injetar `AccountService`.
+    - [ ] Criar record `dto/request/TransactionRequest` com campos `amount` e `type`.
+    - [ ] Criar records `dto/response/AccountBalanceResponse` e `dto/response/TransactionBatchResponse`
+        (incluindo record interno `TransactionResponse`).
+    - [ ] Implementar endpoint `POST /{accountNumber}/transactions`:
+        - [ ] Mapear para o metodo `performTransactions` no serviço.
+        - [ ] Utilizar `@PathVariable` para o número da conta.
+        - [ ] Utilizar `@RequestBody` e `@Valid` para a lista de `TransactionRequest`.
+        - [ ] Retornar `ResponseEntity<TransactionBatchResponse>`.
+    - [ ] Implementar endpoint `GET /{accountNumber}/balance`:
+        - [ ] Mapear para o metodo `getBalance` no serviço.
+        - [ ] Utilizar `@PathVariable` para o número da conta.
+        - [ ] Retornar `ResponseEntity<AccountBalanceResponse>`.
+    - [ ] Implementar endpoint `POST /`:
+        - [ ] Mapear para o metodo `createAccount` no serviço.
+        - [ ] Utilizar `@RequestParam` para `accountNumber` e `initialBalance`.
+        - [ ] Retornar `ResponseEntity<String>` com status 201 Created.
+
+## Validação e Tratamento de Erro
+
+- [X] Adicionar dependência `spring-boot-starter-validation`.
+- [X] Utilizar anotações de validação (`@NotNull`, `@DecimalMin`, `@NotBlank`, etc.) nos DTOs/Records de requisição
+    e parâmetros do Controller.
+- [X] Criar arquivo `src/main/resources/ValidationMessages.properties`.
+
+TODO
+    - [ ] Definir mensagens de validação personalizadas em português no `ValidationMessages.properties`.
+
+- [X] Configurar `spring.messages.basename=ValidationMessages` em `application.yml`.
+- [X] Criar exceções customizadas para erros de negócio (`AccountNotFoundException`, `InsufficientFundsException`).
+- [X] Criar record `exception/ErrorResponse` para o corpo da resposta de erro.
+- [X] Criar classe `exception/ExceptionHandlerAdvice` com `@RestControllerAdvice` para tratamento global de exceções:
+    - [X] Tratar `MethodArgumentNotValidException` (erros de validação) retornando 400 Bad Request.
+    - [X] Tratar `AccountNotFoundException` retornando 404 Not Found.
+    - [X] Tratar `InsufficientFundsException` retornando 422 Unprocessable Entity.
+    - [X] Tratar `TransactionProcessingException` e outras exceções inesperadas retornando 500 Internal Server Error.
+    - [X] Formatar as respostas de erro usando o `ErrorResponse` customizado."
+
+## Documentação (OpenAPI/Swagger)
+
+TODO
+    - [ ] Adicionar dependência `springdoc-openapi-starter-webmvc-ui`.
+    - [ ] Configurar Springdoc em `application.yml` (paths, swagger-ui path).
+    - [ ] Criar classe `config/OpenApiConfig` para configuração customizada do OpenAPI (título, descrição, versão).
+    - [ ] Adicionar anotações OpenAPI (`@Tag`, `@Operation`, `@ApiResponse`, `@Parameter`, `@RequestBody`, `@Schema`)
+        nos Controllers e DTOs para documentar a API.
+    - [ ] Escrever `README.md` na raiz do projeto cobrindo:
+        - [ ] Descrição do projeto e desafio.
+        - [ ] Tecnologias utilizadas.
+        - [ ] Arquitetura e princípios de design aplicados (SOLID, POO, Clean Arch, Patterns, Thread-Safety/Locks).
+        - [ ] Instruções para construir e executar (Maven, Docker).
+        - [ ] Descrição dos endpoints e como acessá-los (Swagger UI).
+        - [ ] Explicação do tratamento de erros.
+        - [ ] Seção sobre testes.
+        - [ ] Menção à coleção Postman.
+        - [ ] Considerações de design (BigDecimal, Nomenclaturas).
+
+## Testes
+
+TODO
+    - [ ] Configurar dependências de teste (JUnit 5, Mockito, Awaitility).
+    - [ ] Escrever testes unitários para `AccountServiceImpl` usando Mockito:
+        - [ ] Testar débito e crédito bem-sucedidos.
+        - [ ] Testar cenário de saldo insuficiente.
+        - [ ] Testar conta não encontrada.
+        - [ ] Testar processamento de lote de transações.
+        - [ ] Testar criação de conta.
+    - [ ] Escrever testes unitários/de integração leves para `AccountRepository` usando `@DataJpaTest`
+        (opcional, mas bom para testar queries customizadas como locks).
+    - [ ] Escrever testes unitários para `AccountController` usando `@WebMvcTest` e `MockMvc`:
+        - [ ] Testar chamadas aos endpoints e verificação dos status HTTP e corpos de resposta esperados.
+        - [ ] Testar cenários de sucesso e de erro (incluindo validação e exceções tratadas pelo Advice).
+    - [ ] Escrever pelo menos um teste de integração de concorrência usando `@SpringBootTest`, `TestRestTemplate`
+        e `Awaitility`:
+        - [ ] Simular múltiplas requisições concorrentes no endpoint de transações para a mesma conta.
+        - [ ] Verificar o saldo final e o número total de transações para garantir a consistência e thread-safety.
+
+## Conteinerização
+
+TODO
+    - [ ] Criar `Dockerfile` em `src/main/docker/` para construir a imagem Docker da aplicação.
+    - [ ] Criar `docker-compose.yml` em `src/main/docker/` para definir e executar o serviço da aplicação em um container.
+    - [ ] Configurar o `docker-compose.yml` para mapear a porta da aplicação.
+
+## Code Quality e Princípios de Design
+
+TODO
+    - [X] Garantir que as nomenclaturas de classes, interfaces, métodos e campos estejam em Inglês.
+    - [X] Garantir que as mensagens de validação e erro estejam em português.
+    - [ ] Aplicar e revisar os princípios SOLID (Single Responsibility, Open/Closed, Liskov Substitution, Interface
+        Segregation, Dependency Inversion) durante t0do o desenvolvimento.
+    - [ ] Utilizar os pilares da POO (Encapsulamento, Herança, Polimorfismo, Abstração).
+    - [ ] Seguir princípios de Clean Code (métodos curtos, nomes significativos, etc.).
+    - [ ] Aplicar padrões de design relevantes (Repository, Service Layer, Dependency Injection).
+
+## Outras Tarefas
+
+TODO
+    - [X] Criar arquivo `Postman/Banking Transactions API.postman_collection.json` com exemplos de requisições para
+        todos os endpoints.
+    - [ ] Revisar e refinar configurações em `application.yml`.
+    - [ ] Adicionar comentários no código onde a lógica de negócio ou partes críticas (como locks) são implementadas.s
