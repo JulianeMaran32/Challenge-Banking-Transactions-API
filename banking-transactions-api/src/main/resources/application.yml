@@ -1,0 +1,49 @@
+server:
+  port: 8080 # Porta padrão para a API
+
+spring:
+  application:
+    name: banking-transactions-api
+  datasource:
+    url: jdbc:h2:mem:bankdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE # Configuração H2 In-Memory
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect # Dialeto JPA para H2
+    hibernate:
+      ddl-auto: update # Auto-criação/atualização do schema (use 'none' ou 'validate' em produção)
+    show-sql: true # Mostra o SQL gerado (útil para depuração)
+    properties:
+      hibernate:
+        format_sql: true # Formata o SQL mostrado
+        # Configurações para lock pessimista (pode ser necessário em alguns casos, mas o @Lock é geralmente suficiente)
+        # jakarta.persistence.lock.timeout: 5000 # Tempo limite para esperar por um lock (em ms)
+        # org.hibernate.jpa.lock.timeout: 5000
+  h2:
+    console:
+      enabled: true # Habilita o console web do H2
+      path: /h2-console # URL para acessar o console (http://localhost:8080/h2-console)
+      settings:
+        web-allow-others: true # Permite acesso remoto (cuidado em produção)
+
+# Configuração do Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics # Endpoints expostos via HTTP
+  endpoint:
+    health:
+      show-details: always # Mostra detalhes da saúde da aplicação
+
+# Configuração de Mensagens de Validação
+spring.messages.basename: ValidationMessages # Nome do arquivo de mensagens de validação (sem a extensão .properties)
+
+# Logging (Exemplo)
+logging:
+  level:
+    juhmaran.challenge.bankingtransactionsapi: DEBUG # Loga o nível DEBUG para o seu pacote
+    org.springframework.web: INFO # Loga o nível INFO para Spring Web
+    org.hibernate.SQL: DEBUG # Mostra o SQL executado pelo Hibernate (útil junto com show-sql)
+    org.hibernate.orm.jdbc.bind: TRACE # Mostra os parâmetros dos prepared statements (útil para depuração)
