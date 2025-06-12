@@ -1,123 +1,151 @@
-# Banking Transaction API
+# Banking Transactions API
 
-## Como Rodar
+## Descrição
 
-1. Clonar o repositório
-2. Instalar as dependências com `mvn install package`
-3. Iniciar o servidor com `mvn spring-boot:run`
-4. Acessar a API em `http://localhost:8080/api/v1`
-5. Para testar a API, você pode usar o Postman ou qualquer outro cliente HTTP.
-6. Para executar os testes, use o comando `mvn test`.
+API RESTful desenvolvida como parte do desafio técnico para a vaga de Analista de Desenvolvimento Java Pleno na Matera.
+O objetivo é gerenciar lançamentos de débito e crédito em contas bancárias de forma thread-safe e consistente.
 
----
+## Tecnologias Utilizadas
 
-1. **Estrutura de Projeto:** Pacotes bem definidos para cada camada (controller, service, repository, entity, dto,
-   exception, config).
-2. **Entidades (`Entity`):** `Account` e `Transaction`.
-3. **Records (`Record`):** DTOs para requisições e respostas.
-4. **Enums (`Enum`):** `TransactionType` (DEBIT, CREDIT).
-5. **Interfaces (`Interface`):** `AccountRepository`, `TransactionRepository`, `AccountService`.
-6. **Implementações (`Implementation`):** `AccountServiceImpl`.
-7. **Controllers (`Controller`):** `AccountController`.
-8. **Exceções Personalizadas (`Exception`):** Para casos como conta não encontrada, saldo insuficiente, etc.
-9. **Tratamento de Erro Global (`@RestControllerAdvice`):** Para formatar respostas de erro personalizadas.
-10. **Validação (`Jakarta Validation`):** Adições de anotações e mensagens em português.
-11. **Configuração (`application.yml`):** H2 Database, JPA, logging.
-12. **Swagger/OpenAPI 3:** Documentação da API.
-13. **Testes Unitários (`JUnit 5`, `Mockito`):** Para Service e Controller.
-14. **Testes de Integração:** Com foco em concorrência.
-15. **Dockerfile:** Para construir a imagem Docker.
-16. **docker-compose.yml:** Para subir a aplicação em container.
-17. **README.md:** Instruções de uso e descrição.
-18. **Postman Collection:** Arquivo de exemplo.
+* **Linguagem:** Java 21
+* **Framework:** Spring Boot 3.3.x
+* **Gerenciador de Dependências/Build:** Maven 3.9.x
+* **Persistência:** Spring Data JPA / Hibernate
+* **Banco de Dados:** H2 Database (Em memória para desenvolvimento/teste)
+* **Documentação API:** Springdoc OpenAPI 3 (Swagger UI)
+* **Contêineres:** Docker / Docker Compose
+* **Testes:** JUnit 5, Mockito
+* **Outros:** Lombok, SLF4J (Logging), Bean Validation
 
----
+## Arquitetura
 
-**Estrutura de Pacotes:**
+O projeto segue uma arquitetura em camadas (inspirada em Clean Architecture / Ports and Adapters), dividida nos pacotes
+principais:
 
+* `domain`: Contém as entidades e regras de negócio puro.
+* `application`: Define os casos de uso e interfaces (Ports) para interação com outras camadas.
+* `infrastructure`: Contém as implementações (Adapters) para a camada de aplicação, incluindo controllers REST,
+  adaptadores JPA, configurações e tratamento de erros.
+
+Esta estrutura promove a separação de responsabilidades, facilita a manutenibilidade, testabilidade e uma eventual
+migração para uma arquitetura de microsserviços, pois as lógicas de negócio (application, domain) são independentes da
+tecnologia de persistência ou da interface de comunicação (infrastructure).
+
+## Gerenciamento de Concorrência
+
+A concorrência é gerenciada utilizando **Database Pessimistic Locking** via Spring Data JPA (
+`@Lock(LockModeType.PESSIMISTIC_WRITE)`). Ao buscar uma conta para realizar um lançamento, um bloqueio de escrita
+exclusivo é adquirido no registro do banco de dados. Isso garante que múltiplas requisições tentando modificar a mesma
+conta simultaneamente serão serializadas pelo banco de dados, prevenindo condições de corrida e inconsistência de dados.
+A transação JPA (`@Transactional`) garante a atomicidade da operação de busca/bloqueio e atualização.
+
+## Inicialização de Dados
+
+Ao iniciar a aplicação, um componente (`DataInitializer`) que implementa `CommandLineRunner` é executado. Ele verifica a
+existência de contas pré-definidas no banco de dados e as cria caso não existam, com um saldo inicial especificado.
+
+## Como Executar Localmente
+
+1. **Pré-requisitos:** Java 21 SDK, Maven 3.9.x.
+2. **Clonar o repositório:** `git clone https://github.com/JulianeMaran32/Challenge-Banking-Transactions-API.git`
+3. **Navegar para a pasta do projeto:** `cd Challenge-Banking-Transactions-API`
+4. **Construir o projeto:** `mvn clean install`
+5. **Executar a aplicação:** `java -jar target/banking-transactions-api-0.0.1-SNAPSHOT.jar` (verifique o nome exato do
+   JAR gerado)
+
+A aplicação iniciará em `http://localhost:8080`.
+
+## Como Executar com Docker
+
+1. **Pré-requisitos:** Docker, Docker Compose.
+2. **Navegar para a pasta do projeto:** `cd Challenge-Banking-Transactions-API`
+3. **Construir a imagem Docker:** `docker-compose build`
+4. **Executar o contêiner:** `docker-compose up`
+
+A aplicação estará acessível via Docker em `http://localhost:8080`.
+
+## Documentação da API (Swagger UI)
+
+Após executar a aplicação (localmente ou com Docker), acesse a documentação interativa em:
+`http://localhost:8080/swagger-ui.html`
+
+## Endpoints
+
+* **`POST /api/accounts/transactions`**
+* **Descrição:** Realiza um ou mais lançamentos (débito ou crédito).
+* **Corpo da Requisição:** Lista de objetos `TransactionRequest`.
+
+* **Request:**
+
+```cURL
+curl --location 'http://localhost:8080/accounts/transactions' \
+--header 'Content-Type: application/json' \
+--data '[
+    {
+        "accountNumber": "1001-1",
+        "amount": 250.50,
+        "type": "CREDIT"
+    },
+    {
+        "accountNumber": "1002-2",
+        "amount": 100.00,
+        "type": "DEBIT"
+    },
+    {
+        "accountNumber": "1003-3",
+        "amount": 50.00,
+        "type": "CREDIT"
+    }
+]'
 ```
-src/main/java/juhmaran/challenge/bankingtransactionsapi/
-├── config/
-│   └── OpenApiConfig.java
-├── controller/
-│   └── AccountController.java
-├── dto/
-│   ├── request/
-│   │   └── TransactionRequest.java
-│   └── response/
-│       ├── AccountBalanceResponse.java
-│       └── TransactionBatchResponse.java
-├── entity/
-│   ├── Account.java
-│   └── Transaction.java
-├── enums/
-│   └── TransactionType.java
-├── exception/
-│   ├── AccountNotFoundException.java
-│   ├── ErrorResponse.java
-│   ├── ExceptionHandlerAdvice.java
-│   ├── InsufficientFundsException.java
-│   └── TransactionProcessingException.java
-├── repository/
-│   ├── AccountRepository.java
-│   └── TransactionRepository.java
-├── service/
-│   ├── AccountService.java
-│   └── AccountServiceImpl.java
-└── BankingTransactionsApiApplication.java
 
-src/main/resources/
-├── application.yml
-└── ValidationMessages.properties
+* **Respostas:**
+    * `200 OK`: Lançamentos processados com sucesso.
+    * `400 Bad Request`: Requisição inválida (erros de validação).
+    * `404 Not Found`: Conta não encontrada.
+    * `409 Conflict`: Saldo insuficiente para débito.
+    * `500 Internal Server Error`: Erro inesperado no servidor.
 
-src/test/java/juhmaran/challenge/bankingtransactionsapi/
-├── controller/
-│   └── AccountControllerTest.java
-├── repository/
-│   └── AccountRepositoryTest.java
-└── service/
-    └── AccountServiceImplTest.java
+* **`GET /api/accounts/{accountNumber}/balance`**
+* **Descrição:** Obtém o saldo atual de uma conta específica.
+* **Parâmetro de Path:** `{accountNumber}` (string) - Número da conta.
 
-src/main/docker/
-├── Dockerfile
-└── docker-compose.yml
+* **Request:**
 
-Postman/
-└── Banking Transactions API.postman_collection.json
+```cURL
+curl --location 'http://localhost:8080/accounts/1001-1/balance'
 ```
 
----
+* **Respostas:**
+    * `200 OK`: Retorna o objeto `AccountBalanceResponse`.
+    ```json
+    {
+    "accountNumber": "1001-1",
+    "balance": 1501.00
+    }
+    ```
+    * `404 Not Found`: Conta não encontrada.
+    * `500 Internal Server Error`: Erro inesperado no servidor.
 
-### Uso de Records
+## Tratamento de Erros Personalizado
 
-* Records são imutáveis e concisos, ideais para DTOs.
-* O construtor canônico é gerado automaticamente.
-* Getters para amount e type são gerados automaticamente.
+Exceções de negócio e erros de validação são capturados por um `@RestControllerAdvice` (`GlobalExceptionHandler`) e
+retornam respostas JSON padronizadas com `timestamp`, `status` HTTP, `error` (texto do status) e uma `message`
+detalhada.
 
-## Observações:
+## Validação
 
-> **Nota:** Para `TransactionResponse.timestamp`, usar `java.time.ZonedDateTime` ou formatar para `String` no
-> serviço/controlador é geralmente melhor do que `LocalDateTime` para APIs REST, pois inclui informações de fuso
-> horário.
-> Mantive `LocalDateTime` para simplicidade, mas tenha isso em mente para aplicações reais.
+Utiliza Jakarta Bean Validation com mensagens de erro definidas em `src/main/resources/messages.properties` em
+português.
 
----
+## Testes
 
-**Explicação da Concorrência:**
+Os testes unitários podem ser executados utilizando Maven:
+`mvn test`
+Os testes focam na lógica de negócio na camada `application`, utilizando Mockito para simular o comportamento do
+repositório.
 
-O ponto crucial da thread-safety aqui é a combinação de `@Transactional` e `@Lock(LockModeType.PESSIMISTIC_WRITE)`:
+## Postman Collection
 
-1. **`@Transactional`:** Garante que todo o *lote* de operações (buscar a conta, atualizar o saldo, criar várias
-   transações, salvar tudo) seja uma única unidade de trabalho no banco de dados. Se algo falhar no meio (ex: saldo
-   insuficiente para o 3º débito), a transação inteira é desfeita, garantindo que o saldo e as transações fiquem como se
-   nada tivesse acontecido.
-2. **`@Lock(LockModeType.PESSIMISTIC_WRITE)`:** Quando `findAccountWithLockByAccountNumber` é chamado dentro da
-   transação, o banco de dados aplica um bloqueio exclusivo (`FOR UPDATE` em SQL, por exemplo) na linha da tabela
-   `accounts` que está sendo lida. Qualquer outra transação que tente ler *ou* escrever nessa mesma linha terá que
-   esperar este bloqueio ser liberado (quando a transação atual terminar - commit ou rollback). Isso impede que duas
-   threads leiam o mesmo saldo, calculem um novo saldo e tentem salvar *ao mesmo tempo*, evitando a condição de corrida.
-3. **Saldo Local:** Usar uma variável `currentBalance` dentro do loop de processamento é bom para a lógica *sequencial*
-   dentro da transação. A garantia de thread-safety vem do *bloqueio no banco* ao ler o saldo inicial e ao salvar o
-   saldo final, não do gerenciamento da variável local em si.
-
-Este é um dos métodos robustos para lidar com atualizações concorrentes de saldo em bancos de dados relacionais.
+Uma coleção Postman para testar os endpoints da API pode ser encontrada na pasta `postman/` na raiz do repositório.
+Importe o arquivo `.json` para testar as operações manualmente.
