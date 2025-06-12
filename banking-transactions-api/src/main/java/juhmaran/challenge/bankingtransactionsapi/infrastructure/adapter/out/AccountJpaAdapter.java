@@ -28,13 +28,9 @@ public class AccountJpaAdapter implements AccountRepositoryPort {
   }
 
   @Override
-  @Transactional // Necessário para o bloqueio funcionar corretamente
-  @Lock(LockModeType.PESSIMISTIC_WRITE) // Bloqueio pessimista de escrita no banco
+  @Transactional
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
   public Optional<Account> findByAccountNumberWithLock(String accountNumber) {
-    // No Spring Data JPA, o metodo findBy... já lida com a execução da query
-    // e a aplicação do lock quando a anotação @Lock está presente no metodo do Repository
-    // ou, como fizemos aqui, no metodo do Adapter que chama o Repository.
-    // É importante que o metodo findByAccountNumberWithLock seja transacional.
     return accountJpaRepository.findByAccountNumber(accountNumber);
   }
 

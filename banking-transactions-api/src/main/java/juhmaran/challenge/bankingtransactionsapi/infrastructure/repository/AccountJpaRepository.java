@@ -16,7 +16,6 @@ public interface AccountJpaRepository extends JpaRepository<Account, Long> {
 
   Optional<Account> findByAccountNumber(String accountNumber);
 
-  // Spring Data JPA implementa automaticamente este metodo
   boolean existsByAccountNumber(String accountNumber);
 
 }

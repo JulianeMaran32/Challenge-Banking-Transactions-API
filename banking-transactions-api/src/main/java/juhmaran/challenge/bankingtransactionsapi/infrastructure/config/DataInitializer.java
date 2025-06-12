@@ -20,19 +20,18 @@ import java.util.List;
  *
  * @since 12/06/2025
  */
-@Component // Marca como um componente Spring
-@Profile("!test") // Opcional: Não executa este inicializador durante os testes unitários
+@Component
+@Profile("!test")
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
   private static final Logger logger = LoggerFactory.getLogger(DataInitializer.class);
 
-  // Injeção de dependência da CLASSE AccountService concreta
   private final AccountService accountService;
 
   @Override
   public void run(String... args) throws Exception {
-    logger.info("Starting data initialization...");
+    logger.info("Iniciando inicialização de dados...");
 
     List<SimpleEntry<String, BigDecimal>> accountsToInitialize = Arrays.asList(
       new SimpleEntry<>("1001-1", new BigDecimal("1000.00")),
@@ -44,15 +43,14 @@ public class DataInitializer implements CommandLineRunner {
     for (SimpleEntry<String, BigDecimal> accountEntry : accountsToInitialize) {
       String accountNumber = accountEntry.getKey();
       BigDecimal initialBalance = accountEntry.getValue();
-      // Call the method on the concrete AccountService class
       try {
         accountService.createAccountIfNotFound(accountNumber, initialBalance);
       } catch (Exception e) {
-        logger.error("Error initializing account '{}': {}", accountNumber, e.getMessage(), e);
+        logger.error("Erro ao inicializar a conta '{}': {}", accountNumber, e.getMessage(), e);
       }
     }
 
-    logger.info("Data initialization completed.");
+    logger.info("Inicialização de dados concluída.");
   }
 
 }
