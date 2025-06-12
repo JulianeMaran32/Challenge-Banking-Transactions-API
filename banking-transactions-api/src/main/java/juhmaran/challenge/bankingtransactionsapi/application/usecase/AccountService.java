@@ -1,7 +1,6 @@
 package juhmaran.challenge.bankingtransactionsapi.application.usecase;
 
 import jakarta.transaction.Transactional;
-import juhmaran.challenge.bankingtransactionsapi.application.port.in.AccountServicePort;
 import juhmaran.challenge.bankingtransactionsapi.application.port.out.AccountRepositoryPort;
 import juhmaran.challenge.bankingtransactionsapi.domain.entity.Account;
 import juhmaran.challenge.bankingtransactionsapi.domain.exception.AccountNotFoundException;
@@ -14,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Implementação do serviço de contas bancárias.
@@ -24,118 +24,129 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class AccountService implements AccountServicePort {
+public class AccountService { // Não implementa mais AccountServicePort diretamente, mas oferece os métodos públicos
 
-  private static final Logger logger = LoggerFactory.getLogger(AccountService.class); // Inicializar Logger
+  private static final Logger logger = LoggerFactory.getLogger(AccountService.class);
 
   private final AccountRepositoryPort accountRepositoryPort;
 
-  @Override
-  @Transactional // Garante que a operação seja atômica.
-  public void performTransactions(List<TransactionRequest> transactions) { // Refactor this method to reduce its Cognitive Complexity from 17 to the 15 allowed.
-    logger.info("Processando lote de {} transações.", transactions == null ? 0 : transactions.size());
+  // Metodo público que implementa a operação performTransactions do AccountServicePort
+  // Pode ser movido para uma nova interface TransactionServicePort se houver mais operações de transação
+  @Transactional
+  public void performTransactions(List<TransactionRequest> transactions) {
+    logger.info("Processing batch of {} transactions.", transactions == null ? 0 : transactions.size());
 
     if (transactions == null || transactions.isEmpty()) {
-      logger.warn("Recebido lote de transações vazio ou nulo.");
-      return; // Ou lançar uma exceção se uma lista vazia for considerada erro
+      logger.warn("Received empty or null transaction batch.");
+      return;
     }
 
-    for (TransactionRequest transaction : transactions) { // Reduce the total number of break and continue statements in this loop to use at most one
-      try {
-        logger.debug("Processando transação: {}", transaction);
-
-        // Buscar e bloquear a conta para garantir acesso exclusivo durante a transação
-        Account account = accountRepositoryPort.findByAccountNumberWithLock(transaction.getAccountNumber())
-          .orElseThrow(() -> new AccountNotFoundException("Conta não encontrada: " + transaction.getAccountNumber()));
-
-        // Validação de valor (Bean Validation já a faz, mas validação de negócio é válida aqui)
-        if (transaction.getAmount() == null || transaction.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-          logger.warn("Valor de transação inválido para conta {}: {}", transaction.getAccountNumber(), transaction.getAmount());
-          // Dependendo da regra de negócio, pode lançar exceção ou pular a transação.
-          // Neste caso, o Bean Validation no controller já deveria ter barrado.
-          // Vamos logar e pular para seguir com as outras transações do lote.
-          continue;
-        }
-
-        switch (transaction.getType()) {
-          case DEBIT:
-            logger.debug("Débito de {} na conta {}", transaction.getAmount(), account.getAccountNumber());
-            account.debit(transaction.getAmount());
-            break;
-          case CREDIT:
-            logger.debug("Crédito de {} na conta {}", transaction.getAmount(), account.getAccountNumber());
-            account.credit(transaction.getAmount());
-            break;
-          default:
-            // Isto não deveria acontecer com o Bean Validation no DTO, mas é uma salvaguarda
-            logger.warn("Tipo de transação inválido para conta {}: {}", transaction.getAccountNumber(), transaction.getType());
-            continue; // Pula esta transação inválida
-        }
-
-        // Salvar a conta com o novo saldo.
-        accountRepositoryPort.save(account);
-        logger.debug("Transação processada com sucesso para conta {}. Novo saldo: {}", account.getAccountNumber(), account.getBalance());
-
-      } catch (
-        AccountNotFoundException e) { // Either log this exception and handle it, or rethrow it with some contextual information.
-        logger.error("Erro ao processar transação: {}", e.getMessage()); // Similar log messages
-        throw e; // Relança para ser capturado pelo GlobalExceptionHandler
-      } catch (InsufficientFundsException e) { // Combine this catch with the one at line 79, which has the same body.
-        // Either log this exception and handle it, or rethrow it with some contextual information.
-        logger.error("Erro ao processar transação: {}", e.getMessage()); // Similar log messages
-        throw e; // Relança para ser capturado pelo GlobalExceptionHandler (HTTP 409)
-      } catch (
-        IllegalArgumentException e) { // Either log this exception and handle it, or rethrow it with some contextual information.
-        // Captura exceções de argumentos inválidos (ex: amount <= 0 nos métodos debit/credit)
-        logger.error("Erro de argumento inválido ao processar transação para conta {}: {}",
-          transaction.getAccountNumber(), e.getMessage());
-        // Decida se quer relançar como 400 ou tratar de outra forma.
-        // Para manter o fluxo do GlobalExceptionHandler, podemos relançar como BadRequest.
-        // Poderíamos criar uma exceção customizada para isso. Por enquanto, relançamos com info genérica.
-        throw new IllegalArgumentException("Dados da transação inválidos: " + e.getMessage());
-      } catch (Exception e) { // Either log this exception and handle it, or rethrow it with some contextual information
-        // Captura outros erros inesperados
-        logger.error("Erro inesperado ao processar transação para conta {}: {}", transaction.getAccountNumber(), e.getMessage(), e);
-        // Decide se quer relançar uma exceção genérica ou específica
-        throw new RuntimeException("Erro interno ao processar transação para conta " + transaction.getAccountNumber(), e); // Define and throw a dedicated exception instead of using a generic one.
-      }
+    for (TransactionRequest transaction : transactions) {
+      processSingleTransaction(transaction);
     }
-    logger.info("Lote de transações concluído.");
+
+    logger.info("Transaction batch completed.");
   }
 
-  @Override
-  public BigDecimal getAccountBalance(String accountNumber) {
-    logger.info("Buscando saldo para conta: {}", accountNumber);
-    Account account = accountRepositoryPort.findByAccountNumber(accountNumber)
-      .orElseThrow(() -> new AccountNotFoundException("Conta não encontrada: " + accountNumber));
+  // Metodo privado para processar uma única transação, extraído para melhorar SRP e legibilidade
+  // Exceções de negócio (AccountNotFound, InsufficientFunds, IllegalArgument) são propagadas
+  // para serem tratadas pelo GlobalExceptionHandler. Erros inesperados são capturados e relançados como RuntimeException.
+  private void processSingleTransaction(TransactionRequest transaction) {
+    Objects.requireNonNull(transaction, "Transaction cannot be null.");
+    logger.debug("Processing transaction: {}", transaction);
 
-    logger.info("Saldo encontrado para conta {}: {}", accountNumber, account.getBalance());
+    // Fetch and lock the account to ensure exclusive access during the transaction
+    Account account = accountRepositoryPort.findByAccountNumberWithLock(transaction.getAccountNumber())
+      .orElseThrow(() -> {
+        logger.warn("Account not found for transaction: {}", transaction.getAccountNumber());
+        return new AccountNotFoundException("Conta não encontrada: " + transaction.getAccountNumber());
+      });
+
+    // Value validation relies primarily on Bean Validation in the DTO and specific entity methods,
+    // but an explicit check before calling debit/credit is also fine.
+    // Let's rely on the checks inside account.debit/credit now.
+    // If a value <= 0 somehow passes Bean Validation, debit/credit will throw IllegalArgumentException.
+
+    try {
+      if (transaction.getType() == null) {
+        logger.warn("Transaction type is null for account {}", transaction.getAccountNumber());
+        // Handle or throw an exception for invalid transaction type
+        throw new IllegalArgumentException("Tipo de transação não especificado.");
+      }
+
+      switch (transaction.getType()) {
+        case DEBIT:
+          logger.debug("Debit of {} from account {}", transaction.getAmount(), account.getAccountNumber());
+          account.debit(transaction.getAmount());
+          break;
+        case CREDIT:
+          logger.debug("Credit of {} to account {}", transaction.getAmount(), account.getAccountNumber());
+          account.credit(transaction.getAmount());
+          break;
+        default:
+          // This case should theoretically not be reachable if TransactionType is a sealed enum or handled by validation
+          logger.warn("Invalid transaction type {} for account {}", transaction.getType(), account.getAccountNumber());
+          throw new IllegalArgumentException("Tipo de transação inválido.");
+      }
+
+      // Save the account with the new balance.
+      accountRepositoryPort.save(account);
+      logger.debug("Transaction successfully processed for account {}. New balance: {}", account.getAccountNumber(), account.getBalance());
+
+    } catch (AccountNotFoundException | InsufficientFundsException | IllegalArgumentException e) {
+      // Catch known business/validation exceptions and rethrow for GlobalExceptionHandler
+      logger.error("Error processing transaction for account {}: {}", transaction.getAccountNumber(), e.getMessage());
+      throw e;
+    } catch (Exception e) {
+      // Catch any other unexpected exceptions
+      logger.error("Unexpected error processing transaction for account {}: {}", transaction.getAccountNumber(), e.getMessage(), e);
+      // Relançar uma exceção genérica interna, GlobalExceptionHandler a mapeará para 500
+      throw new RuntimeException("Erro interno ao processar transação para conta " + transaction.getAccountNumber(), e);
+    }
+  }
+
+
+  // Método público que implementa a operação getAccountBalance do AccountServicePort
+  // Pode ser movido para uma nova interface AccountQueryServicePort
+  public BigDecimal getAccountBalance(String accountNumber) {
+    Objects.requireNonNull(accountNumber, "Account number cannot be null.");
+    logger.info("Fetching balance for account: {}", accountNumber);
+
+    Account account = accountRepositoryPort.findByAccountNumber(accountNumber)
+      .orElseThrow(() -> {
+        logger.warn("Account not found when fetching balance: {}", accountNumber);
+        return new AccountNotFoundException("Conta não encontrada: " + accountNumber);
+      });
+
+    logger.info("Balance found for account {}: {}", accountNumber, account.getBalance());
     return account.getBalance();
   }
 
-  // --- IMPLEMENTAÇÃO DO METODO DE INICIALIZAÇÃO ---
-  @Override
-  @Transactional // Garante que a busca e o save (se ocorrer) sejam atômicos
+  // Método público específico para inicialização de dados, NÃO faz parte do AccountServicePort principal
+  // Segue SRP isolando a lógica de criação inicial.
+  @Transactional
   public void createAccountIfNotFound(String accountNumber, BigDecimal initialBalance) {
-    logger.debug("Tentando criar conta se não existir: {}", accountNumber);
-    // Usamos existsByAccountNumber para uma verificação rápida e eficiente sem carregar a entidade
+    Objects.requireNonNull(accountNumber, "Account number cannot be null.");
+    Objects.requireNonNull(initialBalance, "Initial balance cannot be null.");
+    logger.debug("Attempting to create account if not exists: {}", accountNumber);
+
+    // Use existsByAccountNumber for an efficient check without loading the entity
     boolean exists = accountRepositoryPort.existsByAccountNumber(accountNumber);
 
     if (!exists) {
       try {
-        // Cria a nova entidade
+        // Create the new entity
         Account newAccount = new Account(null, accountNumber, initialBalance);
-        // Salva no banco de dados
+        // Save to database
         accountRepositoryPort.save(newAccount);
-        logger.info("Conta '{}' criada com sucesso. Saldo inicial: {}", accountNumber, initialBalance);
+        logger.info("Account '{}' successfully created with initial balance: {}", accountNumber, initialBalance);
       } catch (Exception e) {
-        // Captura exceções caso ocorra algum problema no save (ex: violação de unique constraint, embora existsByAccountNumber minimize isso)
-        logger.error("Erro ao salvar a conta '{}' durante a inicialização: {}", accountNumber, e.getMessage(), e);
-        // Dependendo da necessidade, pode-se relançar ou apenas logar.
-        // Para inicialização, logar e continuar é razoável, a menos que o erro seja crítico.
+        // Catch exceptions during save (e.g., unique constraint violation in a race condition)
+        logger.error("Error saving account '{}' during initialization: {}", accountNumber, e.getMessage(), e);
+        // Decide whether to rethrow or just log. For initialization, logging is usually sufficient.
       }
     } else {
-      logger.info("Conta '{}' já existe. Pulando criação.", accountNumber);
+      logger.info("Account '{}' already exists. Skipping creation.", accountNumber);
     }
   }
 

@@ -1,6 +1,6 @@
 package juhmaran.challenge.bankingtransactionsapi.infrastructure.config;
 
-import juhmaran.challenge.bankingtransactionsapi.application.port.in.AccountServicePort;
+import juhmaran.challenge.bankingtransactionsapi.application.usecase.AccountService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,15 +25,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
-  private static final Logger logger = LoggerFactory.getLogger(DataInitializer.class); // Inicializar Logger
+  private static final Logger logger = LoggerFactory.getLogger(DataInitializer.class);
 
-  private final AccountServicePort accountServicePort;
+  // Injeção de dependência da CLASSE AccountService concreta
+  private final AccountService accountService;
 
   @Override
   public void run(String... args) throws Exception {
-    logger.info("Iniciando inicialização de dados...");
+    logger.info("Starting data initialization...");
 
-    // Lista de contas a serem criadas (accountNumber, initialBalance)
     List<SimpleEntry<String, BigDecimal>> accountsToInitialize = Arrays.asList(
       new SimpleEntry<>("1001-1", new BigDecimal("1000.00")),
       new SimpleEntry<>("1002-2", new BigDecimal("500.00")),
@@ -44,21 +44,15 @@ public class DataInitializer implements CommandLineRunner {
     for (SimpleEntry<String, BigDecimal> accountEntry : accountsToInitialize) {
       String accountNumber = accountEntry.getKey();
       BigDecimal initialBalance = accountEntry.getValue();
-      // Chama o metodo no serviço para criar a conta se ela não existir
-      // A lógica de try-catch para erros de save já está no serviço.
-      // Aqui, podemos simplesmente chamar e deixar as exceções serem propagadas se necessário,
-      // ou adicionar um try-catch aqui para logar erros por conta individual.
+      // Call the method on the concrete AccountService class
       try {
-        accountServicePort.createAccountIfNotFound(accountNumber, initialBalance);
+        accountService.createAccountIfNotFound(accountNumber, initialBalance);
       } catch (Exception e) {
-        // Loga qualquer erro que ocorra durante a criação de uma conta específica
-        logger.error("Erro ao inicializar a conta '{}': {}", accountNumber, e.getMessage(), e);
-        // Decide se o erro deve parar a aplicação (relançar a exceção) ou apenas logar e continuar.
-        // Para inicialização, logar e continuar é mais robusto.
+        logger.error("Error initializing account '{}': {}", accountNumber, e.getMessage(), e);
       }
     }
 
-    logger.info("Inicialização de dados concluída.");
+    logger.info("Data initialization completed.");
   }
 
 }

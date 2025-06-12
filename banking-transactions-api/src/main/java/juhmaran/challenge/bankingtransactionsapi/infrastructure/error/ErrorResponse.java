@@ -1,8 +1,6 @@
 package juhmaran.challenge.bankingtransactionsapi.infrastructure.error;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
@@ -12,23 +10,26 @@ import java.time.LocalDateTime;
  *
  * @since 10/06/2025
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class ErrorResponse {
+public record ErrorResponse(
+  LocalDateTime timestamp,
+  int status,
+  String error, // HTTP status text (e.g., "Not Found", "Bad Request")
+  String message, // Detailed error message
+  String path // Path of the request that caused the error
+) {
 
-  private LocalDateTime timestamp;
-  private int status;
-  private String error; // HTTP status text (e.g., "Not Found", "Bad Request")
-  private String message; // Detailed error message
-  private String path; // Path of the request that caused the error
-
-  public ErrorResponse(HttpStatus status, String message, String path) {
-    this.timestamp = LocalDateTime.now();
-    this.status = status.value();
-    this.error = status.getReasonPhrase();
-    this.message = message;
-    this.path = path;
+  // Construtor customizado (compact constructor ou metodo estático)
+  // Usando metodo estático para manter a lógica de preenchimento de timestamp, status e error
+  public static ErrorResponse fromStatusAndMessage(
+    @NotNull HttpStatus status,
+    String message, String path) {
+    return new ErrorResponse(
+      LocalDateTime.now(),
+      status.value(),
+      status.getReasonPhrase(),
+      message,
+      path
+    );
   }
 
 }
