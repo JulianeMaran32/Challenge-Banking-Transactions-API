@@ -11,18 +11,18 @@ import java.math.BigDecimal;
 @Schema(description = "Detalhes de uma transação a ser realizada (débito ou crédito).")
 public record TransactionRequest(
   @Schema(description = "Número da conta bancária.", example = "1001-1", type = "string")
-  @NotBlank(message = "{transaction.accountNumber.notBlank}")
+  @NotBlank(message = "O número da conta não pode estar em branco.")
   String accountNumber,
 
   @Schema(description = "Valor da transação.", example = "150.75",
     type = "number", format = "double", minimum = "0.01")
-  @NotNull(message = "{transaction.amount.notNull}")
-  @DecimalMin(value = "0.01", inclusive = false, message = "{transaction.amount.decimalMin}")
+  @NotNull(message = "O valor da transação não pode ser nulo.")
+  @DecimalMin(value = "0.01", inclusive = false, message = "O valor da transação deve ser positivo.")
   BigDecimal amount,
 
   @Schema(description = "Tipo da transação (DEBIT ou CREDIT).", example = "CREDIT",
     type = "string", allowableValues = {"DEBIT", "CREDIT"})
-  @NotNull(message = "{transaction.type.notNull}")
+  @NotNull(message = "O tipo da transação não pode ser nulo.")
   TransactionType type
 ) {
 }

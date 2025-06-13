@@ -30,7 +30,7 @@ public class OpenApiConfig {
           new License().name("MIT License").url("https://opensource.org/licenses/MIT"))
       )
       .servers(List.of(
-        new Server().url("http://localhost:8080").description("Ambiente de Desenvolvimento"))
+        new Server().url("http://localhost:8080/api/v1").description("Ambiente de Desenvolvimento"))
       )
       .tags(List.of(
         new Tag().name("Contas").description("Gerenciamento de contas bancárias e lançamentos")

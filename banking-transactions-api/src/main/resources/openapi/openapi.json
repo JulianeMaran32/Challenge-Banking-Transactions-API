@@ -1,0 +1,251 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Banking Transactions API",
+    "description": "API RESTful desenvolvida como parte do desafio técnico para a vaga de Analista de Desenvolvimento Java Pleno na Matera. O objetivo é gerenciar lançamentos de débito e crédito em contas bancárias de forma thread-safe e consistente.",
+    "contact": {
+      "name": "Juliane Maran",
+      "url": "https://github.com/JulianeMaran32",
+      "email": "julianemaran@gmail.com"
+    },
+    "license": {
+      "name": "MIT License",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/api/v1",
+      "description": "Ambiente de Desenvolvimento"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Contas",
+      "description": "Gerenciamento de contas bancárias e lançamentos"
+    }
+  ],
+  "paths": {
+    "/accounts/transactions": {
+      "post": {
+        "tags": [
+          "Contas"
+        ],
+        "summary": "Realizar lançamentos (débito/crédito)",
+        "description": "Executa uma lista de operações de débito ou crédito em contas específicas.",
+        "operationId": "performTransactions",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TransactionRequest"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Lançamentos processados com sucesso",
+            "content": {
+              "application/json": {}
+            }
+          },
+          "400": {
+            "description": "Requisição inválida (erros de validação ou argumentos inválidos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conta não encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito (saldo insuficiente ou recurso duplicado)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Conteúdo semântico inválido (ex: valor zero/negativo)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/accounts/{accountNumber}/balance": {
+      "get": {
+        "tags": [
+          "Contas"
+        ],
+        "summary": "Obter saldo da conta",
+        "description": "Retorna o saldo atual de uma conta específica.",
+        "operationId": "getAccountBalance",
+        "parameters": [
+          {
+            "name": "accountNumber",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saldo retornado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountBalanceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conta não encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TransactionRequest": {
+        "required": [
+          "accountNumber",
+          "amount",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "accountNumber": {
+            "minLength": 1,
+            "type": "string",
+            "description": "Número da conta bancária.",
+            "example": "1001-1"
+          },
+          "amount": {
+            "minimum": 0.01,
+            "exclusiveMinimum": true,
+            "type": "number",
+            "description": "Valor da transação.",
+            "format": "double",
+            "example": 150.75
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo da transação (DEBIT ou CREDIT).",
+            "example": "CREDIT",
+            "enum": [
+              "DEBIT",
+              "CREDIT"
+            ]
+          }
+        },
+        "description": "Detalhes de uma transação a ser realizada (débito ou crédito)."
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp do erro.",
+            "format": "date-time",
+            "example": "2025-06-12T23:18:02.041Z"
+          },
+          "status": {
+            "type": "integer",
+            "description": "Código de status HTTP.",
+            "format": "int32",
+            "example": 404
+          },
+          "error": {
+            "type": "string",
+            "description": "Texto do status HTTP.",
+            "example": "Not Found"
+          },
+          "message": {
+            "type": "string",
+            "description": "Mensagem detalhada do erro.",
+            "example": "Conta não encontrada: 1001-0"
+          },
+          "path": {
+            "type": "string",
+            "description": "Caminho da requisição que gerou o erro.",
+            "example": "/api/accounts/1001-0/balance"
+          }
+        },
+        "description": "Resposta padronizada para erros da API."
+      },
+      "AccountBalanceResponse": {
+        "type": "object",
+        "properties": {
+          "accountNumber": {
+            "type": "string",
+            "description": "Número da conta bancária.",
+            "example": "1001-1"
+          },
+          "balance": {
+            "type": "number",
+            "description": "Saldo atual da conta.",
+            "example": 1250.75
+          }
+        },
+        "description": "Resposta contendo o saldo atual de uma conta."
+      }
+    }
+  }
+}
