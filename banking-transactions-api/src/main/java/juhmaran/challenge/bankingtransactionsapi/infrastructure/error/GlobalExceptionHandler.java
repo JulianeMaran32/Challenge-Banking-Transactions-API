@@ -14,13 +14,6 @@ import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-/**
- * Componente para centralizar o tratamento de exceções em todos os controladores
- * <p>
- * Created by Juliane Maran
- *
- * @since 10/06/2025
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 

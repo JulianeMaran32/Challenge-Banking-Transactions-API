@@ -4,11 +4,6 @@ import juhmaran.challenge.bankingtransactionsapi.domain.entity.Account;
 
 import java.util.Optional;
 
-/**
- * Created by Juliane Maran
- *
- * @since 10/06/2025
- */
 public interface AccountRepositoryPort {
 
   Optional<Account> findByAccountNumber(String accountNumber);

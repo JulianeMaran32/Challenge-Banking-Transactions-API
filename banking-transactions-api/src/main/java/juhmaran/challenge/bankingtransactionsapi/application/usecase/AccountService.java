@@ -3,9 +3,9 @@ package juhmaran.challenge.bankingtransactionsapi.application.usecase;
 import jakarta.transaction.Transactional;
 import juhmaran.challenge.bankingtransactionsapi.application.port.in.AccountServicePort;
 import juhmaran.challenge.bankingtransactionsapi.application.port.out.AccountRepositoryPort;
+import juhmaran.challenge.bankingtransactionsapi.application.usecase.processor.SingleTransactionProcessor;
 import juhmaran.challenge.bankingtransactionsapi.domain.entity.Account;
 import juhmaran.challenge.bankingtransactionsapi.domain.exception.AccountNotFoundException;
-import juhmaran.challenge.bankingtransactionsapi.domain.exception.InsufficientFundsException;
 import juhmaran.challenge.bankingtransactionsapi.infrastructure.dto.request.TransactionRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -23,6 +23,7 @@ public class AccountService implements AccountServicePort {
   private static final Logger logger = LoggerFactory.getLogger(AccountService.class);
 
   private final AccountRepositoryPort accountRepositoryPort;
+  private final SingleTransactionProcessor singleTransactionProcessor;
 
   @Override
   @Transactional
@@ -35,52 +36,10 @@ public class AccountService implements AccountServicePort {
     }
 
     for (TransactionRequest transaction : transactions) {
-      processSingleTransaction(transaction);
+      singleTransactionProcessor.process(transaction);
     }
 
     logger.info("Lote de transações concluído.");
-  }
-
-  private void processSingleTransaction(TransactionRequest transaction) {
-    Objects.requireNonNull(transaction, "Transação não pode ser nula.");
-    logger.debug("Processando transação: {}", transaction);
-
-    Account account = accountRepositoryPort.findByAccountNumberWithLock(transaction.accountNumber())
-      .orElseThrow(() -> {
-        logger.warn("Conta não encontrada para transação com número: {}", transaction.accountNumber());
-        return new AccountNotFoundException("Conta não encontrada: " + transaction.accountNumber());
-      });
-
-    try {
-      if (transaction.type() == null) {
-        logger.warn("Tipo de transação é nulo para conta {}", transaction.accountNumber());
-        throw new IllegalArgumentException("Tipo de transação não especificado.");
-      }
-
-      switch (transaction.type()) {
-        case DEBIT:
-          logger.debug("Débito de {} na conta {}", transaction.amount(), account.getAccountNumber());
-          account.debit(transaction.amount());
-          break;
-        case CREDIT:
-          logger.debug("Crédito de {} na conta {}", transaction.amount(), account.getAccountNumber());
-          account.credit(transaction.amount());
-          break;
-        default:
-          logger.warn("Tipo de transação inválido {} para conta {}", transaction.type(), account.getAccountNumber());
-          throw new IllegalArgumentException("Tipo de transação inválido.");
-      }
-
-      accountRepositoryPort.save(account);
-      logger.debug("Transação processada com sucesso para conta {}. Novo saldo: {}", account.getAccountNumber(), account.getBalance());
-
-    } catch (AccountNotFoundException | InsufficientFundsException | IllegalArgumentException e) {
-      logger.error("Erro ao processar transação para conta {}: {}", transaction.accountNumber(), e.getMessage());
-      throw e;
-    } catch (Exception e) {
-      logger.error("Erro inesperado ao processar transação para conta {}: {}", transaction.accountNumber(), e.getMessage(), e);
-      throw new RuntimeException("Ocorreu um erro interno ao processar a transação para a conta " + transaction.accountNumber(), e);
-    }
   }
 
   @Override
@@ -95,10 +54,9 @@ public class AccountService implements AccountServicePort {
       });
 
     logger.info("Conta encontrada ao buscar saldo para {}. Saldo: {}", accountNumber, account.getBalance());
-    return account; // Retorna a entidade Account
+    return account;
   }
 
-  // Método de inicialização
   @Transactional
   public void createAccountIfNotFound(String accountNumber, BigDecimal initialBalance) {
     Objects.requireNonNull(accountNumber, "Número da conta não pode ser nulo.");

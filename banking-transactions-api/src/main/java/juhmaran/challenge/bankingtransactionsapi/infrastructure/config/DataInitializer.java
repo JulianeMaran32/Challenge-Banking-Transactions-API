@@ -13,13 +13,6 @@ import java.util.AbstractMap.SimpleEntry;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Componente responsável por inicializar dados no sistema
- * <p>
- * Created by Juliane Maran
- *
- * @since 12/06/2025
- */
 @Component
 @Profile("!test")
 @RequiredArgsConstructor
@@ -30,7 +23,7 @@ public class DataInitializer implements CommandLineRunner {
   private final AccountService accountService;
 
   @Override
-  public void run(String... args) throws Exception {
+  public void run(String... args) {
     logger.info("Iniciando inicialização de dados...");
 
     List<SimpleEntry<String, BigDecimal>> accountsToInitialize = Arrays.asList(
