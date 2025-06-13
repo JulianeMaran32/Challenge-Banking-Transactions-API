@@ -46,17 +46,6 @@ springdoc:
     path: /swagger-ui.html
   api-docs:
     path: /v3/api-docs
-  info:
-    title: Banking Transactions API
-    version: 1.0
-    description: API RESTful para gerenciar lançamentos bancários (desafio Matera)
-    contact:
-      name: Juliane Maran
-      email: julianemaran@gmail.com
-      url: https://github.com/JulianeMaran32
-    license:
-      name: MIT License
-      url: https://opensource.org/licenses/MIT
 
 # Logging (Exemplo)
 logging:

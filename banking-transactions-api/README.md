@@ -5,6 +5,12 @@
 API RESTful desenvolvida como parte do desafio técnico para a vaga de Analista de Desenvolvimento Java Pleno na Matera.
 O objetivo é gerenciar lançamentos de débito e crédito em contas bancárias de forma thread-safe e consistente.
 
+**Links Importantes:**
+
+* Documentação: http://localhost:8080/swagger-ui/index.html#/
+* Banco de dados em memória H2: http://localhost:8080/h2-console
+* Repositório: https://github.com/JulianeMaran32/Challenge-Banking-Transactions-API
+
 ## Tecnologias Utilizadas
 
 * **Linguagem:** Java 21
