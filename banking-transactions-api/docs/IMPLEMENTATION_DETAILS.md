@@ -126,10 +126,8 @@ mesmo de a lógica de negócio ser executada.
 
 ---
 
-Este documento buscou detalhar os aspectos técnicos mais relevantes da solução. Para explorar o código-fonte, o
-repositório completo está disponível
-em: [https://github.com/JulianeMaran32/Challenge-Banking-Transactions-API](https://github.com/JulianeMaran32/Challenge-Banking-Transactions-API)
-
+Este documento buscou detalhar os aspectos técnicos mais relevantes da solução. O código-fonte completo está contido nos
+arquivos entregues.
 
 
 

@@ -1,6 +1,14 @@
 # Desafio Matera - API de Lançamentos Bancários
 
-Este repositório apresenta a solução proposta para o **Desafio 6728457 - API de Lançamentos** da Matera.
+![Java](https://img.shields.io/badge/Java-21-blue?logo=java&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.0-green?logo=spring&logoColor=white)
+![Maven](https://img.shields.io/badge/Maven-3.9.9-red?logo=apache-maven&logoColor=white)
+![H2 Database](https://img.shields.io/badge/Database-H2-orange)
+![Docker](https://img.shields.io/badge/Docker-blue?logo=docker&logoColor=white)
+![Swagger](https://img.shields.io/badge/API%20Doc-Swagger-85EA2D?logo=swagger&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+Este arquivo `.zip` contém a solução proposta para o **Desafio 6728457 - API de Lançamentos** da Matera.
 
 A solução consiste em uma API RESTful robusta, desenvolvida em **Java com Spring Boot**, projetada para gerenciar
 lançamentos de débito e crédito em contas bancárias. Um foco primordial foi dado à **thread-safety e consistência de
@@ -35,7 +43,7 @@ pontos de destaque incluem:
 
 ## 🚀 Como Configurar e Executar
 
-Esta seção fornece as instruções necessárias para rodar a aplicação rapidamente.
+Esta seção fornece as instruções necessárias para rodar a aplicação rapidamente a partir dos arquivos entregues.
 
 ### Pré-requisitos
 
@@ -43,25 +51,26 @@ Certifique-se de ter os seguintes softwares instalados em sua máquina:
 
 * **Java Development Kit (JDK):** Versão 21 ou superior.
 * **Apache Maven:** Versão 3.x ou superior.
-* **Git:** Para clonar o repositório.
 * **Docker e Docker Compose:** (Opcional) Para execução em contêineres.
 
-### 📥 Clonando o Repositório
+### 📥 Conteúdo da Entrega e Como Iniciar
 
-Abra o terminal e execute o comando:
+O arquivo `.zip` entregue contém o código-fonte completo do projeto.
 
-```bash
-git clone https://github.com/JulianeMaran32/Challenge-Banking-Transactions-API.git
-cd Challenge-Banking-Transactions-API # Navegue para a pasta raiz do projeto
-```
+1. **Extraia** o conteúdo do arquivo `.zip` para uma pasta de sua preferência.
+2. Abra o terminal e **navegue para a pasta raiz do projeto** onde o arquivo `README.md` está localizado.
+
+Você encontrará a estrutura do projeto, incluindo a pasta `banking-transactions-api` que contém o código principal da
+aplicação.
 
 ### 🛠️ Execução Local (com Maven)
 
-1. Navegue para o diretório do módulo principal da API:
+1. No terminal, navegue para o diretório do módulo principal da API:
    ```bash
    cd banking-transactions-api
    ```
-2. Construa o projeto (este comando também executa os testes):
+2. Construa o projeto: Este comando irá compilar o código, executar os testes automatizados e empacotar a aplicação em
+   um arquivo JAR.
    ```bash
    mvn clean install
    ```
@@ -71,22 +80,35 @@ cd Challenge-Banking-Transactions-API # Navegue para a pasta raiz do projeto
    ```
    *(Nota: Verifique o nome exato do arquivo `.jar` na pasta `target` após a build)*
 
-A aplicação será iniciada e estará acessível em `http://localhost:8080`.
+A aplicação será iniciada e estará acessível em `http://localhost:8080/api/v1`.
 
 ### 🐳 Execução com Docker Compose
 
-1. Certifique-se de estar na pasta raiz do repositório (onde o `docker-compose.yml` está localizado).
+1. Certifique-se de estar na pasta raiz do projeto (onde o arquivo `docker-compose.yml` está localizado).
    ```bash
-   cd Challenge-Banking-Transactions-API # Se você já não estiver aqui
+   # Verifique se você está na pasta correta
+   ls docker-compose.yml 
    ```
 2. Construa a imagem Docker e inicie o contêiner:
    ```bash
    docker compose up --build
    ```
-   *(O parâmetro `--build` garante que a imagem será construída a partir do Dockerfile mais recente)*
+   *(O parâmetro `--build` garante que a imagem será construída a partir do Dockerfile)*
 
 A aplicação estará acessível via Docker em `http://localhost:8080/api/v1`. Para parar os contêineres, pressione `Ctrl+C`
 no terminal onde o `docker compose up` está rodando ou use `docker compose down`.
+
+## Testes
+
+O projeto inclui testes unitários para a lógica da camada de serviço (`AccountServiceTest`).
+
+### Executando Testes Unitários
+
+Para executar todos os testes unitários usando Maven:
+
+```bash
+mvn test
+```
 
 ### 🌐 Acesso à API e Ferramentas Úteis
 
@@ -94,6 +116,8 @@ Após iniciar a aplicação (localmente ou via Docker), você pode acessá-la e 
 endereços:
 
 * **Base URL da API:** `http://localhost:8080/api/v1`
+
+* Acesse: `http://localhost:8080/api/v1/swagger-ui.html`
 * **Documentação Interativa (Swagger UI):**
     * **URL:** [http://localhost:8080/api/v1/swagger-ui.html](http://localhost:8080/api/v1/swagger-ui.html)
     * *Este é o local recomendado para explorar e testar os endpoints.*
@@ -101,9 +125,9 @@ endereços:
     * **URL:** [http://localhost:8080/api/v1/h2-console](http://localhost:8080/api/v1/h2-console)
     * **Credenciais (conforme configurado em `application.yml`):**
         * Usuário: `sa`
-        * Senha: (campo senha é vazio)
-        * JDBC URL: `jdbc:h2:mem:bankdb`
-    * *Útil para inspecionar o estado do banco de dados em memória.*
+            * Senha: (campo senha é vazio)
+            * JDBC URL: `jdbc:h2:mem:bankdb`
+        * *Útil para inspecionar o estado do banco de dados em memória.*
 
 ## 📖 Endpoints da API
 
@@ -192,5 +216,5 @@ Para quaisquer perguntas ou feedback, sinta-se à vontade para entrar em contato
 
 ## 📄 Licença
 
-Este projeto está licenciado sob a [Licença MIT](./../LICENSE).
+Este projeto está licenciado sob a [Licença MIT](https://opensource.org/licenses/MIT).
 

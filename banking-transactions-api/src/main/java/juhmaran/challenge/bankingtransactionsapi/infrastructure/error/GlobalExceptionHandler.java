@@ -39,8 +39,7 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(IllegalArgumentException.class)
   public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
-    // Mapeado para 422 Unprocessable Content para erros semânticos (ex: valor <= 0)
-    HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY; // 422
+    HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY;
     String path = ((ServletWebRequest) request).getRequest().getRequestURI();
     logger.warn("Argumento inválido / Conteúdo não processável: {} - Path: {}", ex.getMessage(), path);
     ErrorResponse errorResponse = ErrorResponse.fromStatusAndMessage(status, ex.getMessage(), path);
@@ -70,15 +69,15 @@ public class GlobalExceptionHandler {
     String message;
     StringBuilder validationErrors = new StringBuilder();
 
-    if (ex instanceof MethodArgumentNotValidException) { // Replace this instanceof check and cast with 'instanceof MethodArgumentNotValidException manvEx'
-      MethodArgumentNotValidException manvEx = (MethodArgumentNotValidException) ex; // Variable 'manvEx' can be replaced with pattern variable
+    if (ex instanceof MethodArgumentNotValidException) {
+      MethodArgumentNotValidException manvEx = (MethodArgumentNotValidException) ex;
       manvEx.getBindingResult().getFieldErrors().forEach(error ->
         validationErrors.append(error.getField()).append(": ").append(error.getDefaultMessage()).append("; ")
       );
       message = "Erros de validação: " + validationErrors.toString().trim();
       logger.warn("Erros de validação: {} - Path: {}", message, path);
-    } else if (ex instanceof MethodArgumentTypeMismatchException) { // Replace this instanceof check and cast with 'instanceof MethodArgumentNotValidException manvEx'
-      MethodArgumentTypeMismatchException mtmEx = (MethodArgumentTypeMismatchException) ex; // Variable 'manvEx' can be replaced with pattern variable
+    } else if (ex instanceof MethodArgumentTypeMismatchException) {
+      MethodArgumentTypeMismatchException mtmEx = (MethodArgumentTypeMismatchException) ex;
       message = String.format("Parâmetro '%s' com tipo inválido. Valor recebido: '%s'",
         mtmEx.getName(), mtmEx.getValue());
       logger.warn("Erro de tipo de parâmetro: {} - Path: {}", message, path);

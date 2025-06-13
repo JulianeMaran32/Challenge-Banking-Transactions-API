@@ -6,11 +6,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-/**
- * Created by Juliane Maran
- *
- * @since 11/06/2025
- */
 @Repository
 public interface AccountJpaRepository extends JpaRepository<Account, Long> {
 
