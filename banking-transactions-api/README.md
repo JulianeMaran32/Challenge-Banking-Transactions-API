@@ -1,250 +1,196 @@
-# Banking Transactions API
+# Desafio Matera - API de Lançamentos Bancários
 
-## Descrição
+Este repositório apresenta a solução proposta para o **Desafio 6728457 - API de Lançamentos** da Matera.
 
-API RESTful desenvolvida como parte do desafio técnico para a vaga de Analista de Desenvolvimento Java Pleno na Matera.
-O objetivo é gerenciar lançamentos de débito e crédito em contas bancárias de forma thread-safe e consistente.
+A solução consiste em uma API RESTful robusta, desenvolvida em **Java com Spring Boot**, projetada para gerenciar
+lançamentos de débito e crédito em contas bancárias. Um foco primordial foi dado à **thread-safety e consistência de
+dados** em ambientes concorrentes, requisitos essenciais do desafio.
 
-**Links Úteis:**
+## 🎯 O Desafio Original
 
-* Documentação Interativa da API (Swagger
-  UI): [http://localhost:8080/swagger-ui.html](http://localhost:8080/api/v1/swagger-ui.html)
-* Console do Banco de Dados em Memória H2: [http://localhost:8080/api/v1/h2-console](http://localhost:8080/h2-console)
-    * Credenciais (padrão `application.yml`): Usuário: `sa`, Senha: `password`, JDBC URL: `jdbc:h2:mem:testdb`
-* Repositório Completo do
-  Projeto: [https://github.com/JulianeMaran32/Challenge-Banking-Transactions-API](https://github.com/JulianeMaran32/Challenge-Banking-Transactions-API)
+O objetivo era criar uma API para operações bancárias com as seguintes características principais:
 
----
+1. Crie uma API RESTful para realizar lançamentos bancários de débito e crédito nas contas dos clientes.
+2. Seus endpoints devem permitir as seguintes operações:
+    * Realizar um lançamento de débito e crédito em uma conta específica.
+    * Deve permitir mais de um lançamento na mesma requisição.
+    * Obter o saldo atual de uma conta específica.
+3. Certifique-se de que a API seja thread-safe para lidar com requisições concorrentes.
+4. Evite condições de corrida e garanta a consistência dos dados compartilhados entre as threads.
+5. Documente a API, especificando os endpoints, métodos HTTP suportados, parâmetros esperados e formatos de resposta.
+6. Escreva um conjunto de testes que você julgar necessário.
+7. Recomenda-se o uso das seguintes tecnologias/frameworks: Java, Spring, Hibernate e outros que você julgar necessário.
 
-## Sumário
+## ✨ Destaques da Solução
 
-1. [Tecnologias Utilizadas](#tecnologias-utilizadas)
-2. [Arquitetura](#arquitetura)
-3. [Gerenciamento de Concorrência](#gerenciamento-de-concorrência)
-4. [Inicialização de Dados](#inicialização-de-dados)
-5. [Como Configurar e Executar](#como-configurar-e-executar)
-    * [Pré-requisitos](#pré-requisitos)
-    * [Execução Local (Maven)](#execução-local-maven)
-    * [Execução com Docker Compose](#execução-com-docker-compose)
-6. [Endpoints da API](#endpoints-da-api)
-    * [POST /api/accounts/transactions](#post-apiaccountstransactions)
-    * [GET /api/accounts/{accountNumber}/balance](#get-apiaccountsaccountnumberbalance)
-7. [Tratamento de Erros Personalizado](#tratamento-de-erros-personalizado)
-8. [Validação](#validação)
-9. [Testes](#testes)
-    * [Testes Unitários](#testes-unitários)
-    * [Testes Manuais (Postman)](#testes-manuais-postman)
+A solução implementada atende a todos os requisitos do desafio e incorpora boas práticas de desenvolvimento. Alguns
+pontos de destaque incluem:
 
----
+* **API RESTful:** Endpoints claros para lançamentos em lote e consulta de saldo.
+* **Thread-Safety e Consistência:** Implementação robusta utilizando técnicas de bloqueio de banco de dados para
+  garantir a integridade dos dados em operações concorrentes.
+* **Documentação Automática:** Uso de Swagger/OpenAPI para documentar a API de forma interativa.
+* **Testes:** Cobertura com testes unitários e facilidades para testes manuais (Postman).
+* **Execução Facilitada:** Suporte para execução local via Maven e em contêineres Docker.
 
-## Tecnologias Utilizadas
+## 🚀 Como Configurar e Executar
 
-* **Linguagem:** Java 21
-* **Framework:** Spring Boot 3.3.x
-* **Gerenciador de Dependências/Build:** Maven 3.9.x
-* **Persistência:** Spring Data JPA / Hibernate
-* **Banco de Dados:** H2 Database (Em memória para desenvolvimento/teste)
-* **Documentação API:** Springdoc OpenAPI 3 (Swagger UI)
-* **Mapeamento:** MapStruct
-* **Contêineres:** Docker / Docker Compose
-* **Testes:** JUnit 5, Mockito
-* **Outros:** Lombok, SLF4J (Logging), Jakarta Bean Validation
-
-## Arquitetura
-
-O projeto segue uma arquitetura em camadas (inspirada em Clean Architecture / Ports and Adapters), dividida nos pacotes
-principais:
-
-* `domain`: Contém as entidades e regras de negócio puro (Entidades, Exceções de Domínio, Serviços de Domínio).
-* `application`: Define os casos de uso (Services) e interfaces (Ports) que orquestram a lógica de negócio,
-  independentes da tecnologia de infraestrutura.
-* `infrastructure`: Contém as implementações (Adapters) dos ports da camada de aplicação, incluindo controllers REST,
-  adaptadores JPA para persistência, configurações, mappers DTO <-> Entidade e tratamento de erros.
-
-Esta estrutura promove a separação de responsabilidades, facilita a manutenibilidade, testabilidade e uma eventual
-migração para uma arquitetura de microsserviços, pois as lógicas de negócio (application, domain) são independentes da
-tecnologia de persistência ou da interface de comunicação (infrastructure).
-
-## Gerenciamento de Concorrência
-
-A concorrência nas operações de débito/crédito é gerenciada utilizando **Database Pessimistic Locking** via Spring Data
-JPA (`@Lock(LockModeType.PESSIMISTIC_WRITE)`). Ao buscar uma conta para realizar um lançamento em uma transação (
-`@Transactional`), um bloqueio de escrita exclusivo é adquirido no registro correspondente no banco de dados. Isso
-garante que múltiplas requisições tentando modificar a mesma conta simultaneamente serão serializadas pelo banco de
-dados, prevenindo condições de corrida e garantindo a consistência dos dados.
-
-## Inicialização de Dados
-
-Ao iniciar a aplicação, um componente (`DataInitializer`) que implementa `CommandLineRunner` é executado. Ele verifica a
-existência de contas pré-definidas (configuradas no próprio inicializador) no banco de dados e as cria caso não existam,
-com um saldo inicial especificado. Isso garante que algumas contas estejam disponíveis para testes imediatos ao iniciar
-a aplicação.
-
-## Como Configurar e Executar
-
-Esta seção descreve como colocar a aplicação em funcionamento.
+Esta seção fornece as instruções necessárias para rodar a aplicação rapidamente.
 
 ### Pré-requisitos
 
-Certifique-se de ter os seguintes softwares instalados:
+Certifique-se de ter os seguintes softwares instalados em sua máquina:
 
-* Java Development Kit (JDK) versão 21
-* Apache Maven versão 3.9.x
-* Docker e Docker Compose (opcional, para execução em contêineres)
-* Git
+* **Java Development Kit (JDK):** Versão 21 ou superior.
+* **Apache Maven:** Versão 3.x ou superior.
+* **Git:** Para clonar o repositório.
+* **Docker e Docker Compose:** (Opcional) Para execução em contêineres.
 
-### Execução Local (Maven)
+### 📥 Clonando o Repositório
 
-1. **Clone o repositório:**
+Abra o terminal e execute o comando:
+
+```bash
+git clone https://github.com/JulianeMaran32/Challenge-Banking-Transactions-API.git
+cd Challenge-Banking-Transactions-API # Navegue para a pasta raiz do projeto
+```
+
+### 🛠️ Execução Local (com Maven)
+
+1. Navegue para o diretório do módulo principal da API:
    ```bash
-   git clone https://github.com/JulianeMaran32/Challenge-Banking-Transactions-API.git
+   cd banking-transactions-api
    ```
-2. **Navegue para a pasta do projeto da API:**
-   ```bash
-   cd Challenge-Banking-Transactions-API/banking-transactions-api
-   ```
-3. **Construa o projeto:** Este comando irá compilar o código, executar os testes e empacotar a aplicação em um arquivo
-   JAR.
+2. Construa o projeto (este comando também executa os testes):
    ```bash
    mvn clean install
    ```
-4. **Execute a aplicação:**
+3. Execute o arquivo JAR gerado:
    ```bash
    java -jar target/banking-transactions-api-0.0.1-SNAPSHOT.jar
    ```
    *(Nota: Verifique o nome exato do arquivo `.jar` na pasta `target` após a build)*
 
-A aplicação estará acessível em `http://localhost:8080/api/v1`.
+A aplicação será iniciada e estará acessível em `http://localhost:8080`.
 
-### Execução com Docker Compose
+### 🐳 Execução com Docker Compose
 
-1. **Pré-requisitos:** Docker e Docker Compose instalados.
-2. **Clone o repositório (se ainda não o fez):**
+1. Certifique-se de estar na pasta raiz do repositório (onde o `docker-compose.yml` está localizado).
    ```bash
-   git clone https://github.com/JulianeMaran32/Challenge-Banking-Transactions-API.git
+   cd Challenge-Banking-Transactions-API # Se você já não estiver aqui
    ```
-3. **Navegue para a pasta raiz do repositório (onde está o arquivo `docker-compose.yml`):**
-   ```bash
-   cd Challenge-Banking-Transactions-API
-   ```
-4. **Construa a imagem Docker e inicie o contêiner:**
+2. Construa a imagem Docker e inicie o contêiner:
    ```bash
    docker compose up --build
    ```
-   *(O parâmetro `--build` garante que a imagem será construída a partir do Dockerfile)*
+   *(O parâmetro `--build` garante que a imagem será construída a partir do Dockerfile mais recente)*
 
-A aplicação estará acessível via Docker em `http://localhost:8080/api/v1`. Para parar os contêineres, pressione `Ctrl+C` no
-terminal onde o `docker compose up` está rodando ou use `docker compose down`.
+A aplicação estará acessível via Docker em `http://localhost:8080/api/v1`. Para parar os contêineres, pressione `Ctrl+C`
+no terminal onde o `docker compose up` está rodando ou use `docker compose down`.
 
-## Endpoints da API
+### 🌐 Acesso à API e Ferramentas Úteis
 
-A documentação interativa completa dos endpoints, incluindo exemplos de requisição e resposta, está disponível no
-**[Swagger UI](http://localhost:8080/api/v1/swagger-ui.html)** após a execução da aplicação. Abaixo, um resumo dos
-endpoints
-principais:
+Após iniciar a aplicação (localmente ou via Docker), você pode acessá-la e ferramentas de desenvolvimento nos seguintes
+endereços:
 
-### `POST /api/accounts/transactions`
+* **Base URL da API:** `http://localhost:8080/api/v1`
+* **Documentação Interativa (Swagger UI):**
+    * **URL:** [http://localhost:8080/api/v1/swagger-ui.html](http://localhost:8080/api/v1/swagger-ui.html)
+    * *Este é o local recomendado para explorar e testar os endpoints.*
+* **Console do Banco de Dados H2 (Em Memória):**
+    * **URL:** [http://localhost:8080/api/v1/h2-console](http://localhost:8080/api/v1/h2-console)
+    * **Credenciais (conforme configurado em `application.yml`):**
+        * Usuário: `sa`
+        * Senha: (campo senha é vazio)
+        * JDBC URL: `jdbc:h2:mem:bankdb`
+    * *Útil para inspecionar o estado do banco de dados em memória.*
 
-* **Descrição:** Processa um lote de operações de débito ou crédito em contas específicas. Permite múltiplos lançamentos
-  em uma única requisição.
-* **Corpo da Requisição:** Uma lista (`Array`) de objetos `TransactionRequest`. Veja o modelo `TransactionRequest` na
-  documentação Swagger para detalhes dos campos e validações.
+## 📖 Endpoints da API
 
-* **Exemplo de Request (`cURL`):**
+Os principais endpoints implementados são:
 
-```bash
-curl --location 'http://localhost:8080/api/v1/accounts/transactions' \
---header 'Content-Type: application/json' \
---data '[
-    {
-        "accountNumber": "1001-1",
-        "amount": 250.50,
-        "type": "CREDIT"
-    },
-    {
-        "accountNumber": "1002-2",
-        "amount": 100.00,
-        "type": "DEBIT"
-    },
-    {
-        "accountNumber": "1003-3",
-        "amount": 50.00,
-        "type": "CREDIT"
-    }
-]'
-```
+### `POST /api/v1/accounts/transactions`
 
-* **Respostas Possíveis:**
-    * `200 OK`: Lançamentos processados com sucesso. (Mantido 200 OK conforme solicitação)
-    * `400 Bad Request`: Requisição inválida (erros de validação nos DTOs ou argumentos semânticos inválidos).
-    * `404 Not Found`: Uma ou mais contas envolvidas nos lançamentos não foram encontradas.
-    * `409 Conflict`: Ocorreu um conflito de estado, como saldo insuficiente para uma operação de débito.
-    * `422 Unprocessable Content`: Ocorreu um erro semântico nos dados da requisição (ex: valor de transação zero ou
-      negativo).
-    * `500 Internal Server Error`: Ocorreu um erro inesperado no servidor durante o processamento.
+* **Descrição:** Processa um ou mais lançamentos de débito/crédito em contas específicas.
+* **Método HTTP:** `POST`
+* **Corpo da Requisição:** Um array de objetos representando as transações a serem realizadas. Consulte o Swagger UI
+  para a estrutura detalhada do objeto de requisição (`TransactionRequest`) e suas validações.
+* **Exemplo cURL:**
+  ```bash
+  curl --location 'http://localhost:8080/api/v1/accounts/transactions' \
+  --header 'Content-Type: application/json' \
+  --data '[
+      {
+          "accountNumber": "1001-1",
+          "amount": 250.50,
+          "type": "CREDIT"
+      },
+      {
+          "accountNumber": "1002-2",
+          "amount": 100.00,
+          "type": "DEBIT"
+      }
+  ]'
+  ```
+* **Possíveis Respostas (Status HTTP):** `200 OK`, `400 Bad Request`, `404 Not Found`, `409 Conflict`,
+  `422 Unprocessable Content`, `500 Internal Server Error`. Detalhes sobre o tratamento de erros são explicados no
+  documento de detalhes técnicos.
 
-### `GET /api/accounts/{accountNumber}/balance`
+### `GET /api/v1/accounts/{accountNumber}/balance`
 
 * **Descrição:** Obtém o saldo atual de uma conta específica.
-* **Parâmetro de Path:** `{accountNumber}` (string) - O número da conta para a qual o saldo será consultado.
-* **Responde com:** Um objeto `AccountBalanceResponse` contendo o número da conta e o saldo. Veja o modelo
-  `AccountBalanceResponse` na documentação Swagger.
-
-* **Exemplo de Request (`cURL`):**
-
-```bash
-curl --location 'http://localhost:8080/api/v1/accounts/1001-1/balance'
-```
-
-* **Respostas Possíveis:**
-    * `200 OK`: Retorna o objeto `AccountBalanceResponse` com o saldo.
-  ```json
-  {
-    "accountNumber": "1001-1",
-    "balance": 1501.00
-  }
+* **Método HTTP:** `GET`
+* **Parâmetros de Path:** `{accountNumber}` (string) - O número da conta.
+* **Resposta de Sucesso (`200 OK`):** Um objeto contendo o número da conta e o saldo (`AccountBalanceResponse`).
+  Consulte o Swagger UI.
+* **Exemplo cURL:**
+  ```bash
+  curl --location 'http://localhost:8080/api/v1/accounts/1001-1/balance'
   ```
-    * `404 Not Found`: A conta especificada no path não foi encontrada.
-    * `500 Internal Server Error`: Ocorreu um erro inesperado no servidor durante a consulta.
+* **Possíveis Respostas (Status HTTP):** `200 OK`, `404 Not Found`, `500 Internal Server Error`.
 
-## Tratamento de Erros Personalizado
+## ✅ Testes
 
-Exceções de negócio (`AccountNotFoundException`, `InsufficientFundsException`) e erros de validação/sistema são
-capturados por um `@RestControllerAdvice` (`GlobalExceptionHandler`). Este handler centraliza o tratamento de erros,
-mapeando diferentes tipos de exceções para códigos de status HTTP apropriados (400, 404, 409, 422, 500) e retornando
-respostas JSON padronizadas utilizando o Record `ErrorResponse`.
+O projeto inclui testes para garantir a correção e robustez da aplicação.
 
-## Validação
+### Testes Automatizados (Unitários)
 
-Utiliza Jakarta Bean Validation (`spring-boot-starter-validation`) para validar os DTOs de entrada (
-`TransactionRequest`). As regras de validação (ex: `@NotBlank`, `@NotNull`, `@DecimalMin`) são declaradas diretamente
-nos Records, e as mensagens de erro correspondentes são definidas nos arquivos `messages.properties` para suporte a
-i18n.
+Testes unitários foram implementados para verificar a lógica de negócio isoladamente.
 
-## Testes
-
-O projeto inclui diferentes abordagens de teste:
-
-### Testes Unitários
-
-Testes focados em verificar a lógica de negócio na camada `application` (Serviços) de forma isolada, utilizando JUnit 5
-e Mockito para simular o comportamento das dependências (como o repositório).
-
-Para executar os testes unitários utilizando o Maven:
+Para executar os testes automatizados:
 
 ```bash
+cd banking-transactions-api # Navegue para o diretório do módulo da API
 mvn test
 ```
 
-O comando `mvn clean install` (usado para construir o projeto) também executa os testes automaticamente.
+*O comando `mvn clean install` também executa os testes automaticamente.*
 
 ### Testes Manuais (Postman)
 
-Uma coleção Postman para testar os endpoints da API manualmente está disponível para facilitar a verificação das
-operações e respostas.
+Uma coleção Postman foi criada para facilitar a execução manual dos endpoints.
 
-Você pode encontrar o arquivo da coleção na pasta `postman/` na raiz do repositório:
-`./postman/Banking Transactions API.postman_collection.json`
+O arquivo da coleção está disponível
+em [API Lançamento - Postman Collection](./src/main/resources/collections/API%20Lançamento.postman_collection.json).
 
-Importe este arquivo `.json` no Postman para ter acesso rápido aos exemplos de requisição, incluindo cenários de sucesso
-e erro, e testar a API em funcionamento.
+Importe este arquivo no Postman para testar os endpoints com exemplos pré-configurados, incluindo cenários de sucesso e
+erro.
+
+## 📚 Detalhes Técnicos da Implementação
+
+Para uma compreensão aprofundada sobre as decisões de arquitetura, a estratégia de gerenciamento de concorrência (
+thread-safety), tratamento de erros, validações, inicialização de dados e outras escolhas de implementação, por favor,
+consulte o documento dedicado:
+
+➡️ **[Detalhes de Implementação](./docs/IMPLEMENTATION_DETAILS.md)**
+
+## 📞 Contato
+
+Para quaisquer perguntas ou feedback, sinta-se à vontade para entrar em contato:
+
+[Entre em contato via E-mail](mailto:juhvaliatimaran@gmail.com)
+
+## 📄 Licença
+
+Este projeto está licenciado sob a [Licença MIT](./../LICENSE).
+
