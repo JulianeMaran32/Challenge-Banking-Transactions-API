@@ -8,8 +8,8 @@ O objetivo é gerenciar lançamentos de débito e crédito em contas bancárias 
 **Links Úteis:**
 
 * Documentação Interativa da API (Swagger
-  UI): [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-* Console do Banco de Dados em Memória H2: [http://localhost:8080/h2-console](http://localhost:8080/h2-console)
+  UI): [http://localhost:8080/swagger-ui.html](http://localhost:8080/api/v1/swagger-ui.html)
+* Console do Banco de Dados em Memória H2: [http://localhost:8080/api/v1/h2-console](http://localhost:8080/h2-console)
     * Credenciais (padrão `application.yml`): Usuário: `sa`, Senha: `password`, JDBC URL: `jdbc:h2:mem:testdb`
 * Repositório Completo do
   Projeto: [https://github.com/JulianeMaran32/Challenge-Banking-Transactions-API](https://github.com/JulianeMaran32/Challenge-Banking-Transactions-API)
@@ -114,7 +114,7 @@ Certifique-se de ter os seguintes softwares instalados:
    ```
    *(Nota: Verifique o nome exato do arquivo `.jar` na pasta `target` após a build)*
 
-A aplicação estará acessível em `http://localhost:8080`.
+A aplicação estará acessível em `http://localhost:8080/api/v1`.
 
 ### Execução com Docker Compose
 
@@ -129,17 +129,18 @@ A aplicação estará acessível em `http://localhost:8080`.
    ```
 4. **Construa a imagem Docker e inicie o contêiner:**
    ```bash
-   docker-compose up --build
+   docker compose up --build
    ```
    *(O parâmetro `--build` garante que a imagem será construída a partir do Dockerfile)*
 
-A aplicação estará acessível via Docker em `http://localhost:8080`. Para parar os contêineres, pressione `Ctrl+C` no
-terminal onde o `docker-compose up` está rodando ou use `docker-compose down`.
+A aplicação estará acessível via Docker em `http://localhost:8080/api/v1`. Para parar os contêineres, pressione `Ctrl+C` no
+terminal onde o `docker compose up` está rodando ou use `docker compose down`.
 
 ## Endpoints da API
 
 A documentação interativa completa dos endpoints, incluindo exemplos de requisição e resposta, está disponível no
-**[Swagger UI](http://localhost:8080/swagger-ui.html)** após a execução da aplicação. Abaixo, um resumo dos endpoints
+**[Swagger UI](http://localhost:8080/api/v1/swagger-ui.html)** após a execução da aplicação. Abaixo, um resumo dos
+endpoints
 principais:
 
 ### `POST /api/accounts/transactions`
@@ -152,7 +153,7 @@ principais:
 * **Exemplo de Request (`cURL`):**
 
 ```bash
-curl --location 'http://localhost:8080/api/accounts/transactions' \
+curl --location 'http://localhost:8080/api/v1/accounts/transactions' \
 --header 'Content-Type: application/json' \
 --data '[
     {
@@ -192,7 +193,7 @@ curl --location 'http://localhost:8080/api/accounts/transactions' \
 * **Exemplo de Request (`cURL`):**
 
 ```bash
-curl --location 'http://localhost:8080/api/accounts/1001-1/balance'
+curl --location 'http://localhost:8080/api/v1/accounts/1001-1/balance'
 ```
 
 * **Respostas Possíveis:**
@@ -211,9 +212,7 @@ curl --location 'http://localhost:8080/api/accounts/1001-1/balance'
 Exceções de negócio (`AccountNotFoundException`, `InsufficientFundsException`) e erros de validação/sistema são
 capturados por um `@RestControllerAdvice` (`GlobalExceptionHandler`). Este handler centraliza o tratamento de erros,
 mapeando diferentes tipos de exceções para códigos de status HTTP apropriados (400, 404, 409, 422, 500) e retornando
-respostas JSON padronizadas utilizando o Record `ErrorResponse`. As mensagens de erro apresentadas ao cliente são
-externalizadas nos arquivos `messages_pt_BR.properties` e `messages_en.properties` para suporte a internacionalização e
-são selecionadas com base no cabeçalho `Accept-Language` da requisição.
+respostas JSON padronizadas utilizando o Record `ErrorResponse`.
 
 ## Validação
 
