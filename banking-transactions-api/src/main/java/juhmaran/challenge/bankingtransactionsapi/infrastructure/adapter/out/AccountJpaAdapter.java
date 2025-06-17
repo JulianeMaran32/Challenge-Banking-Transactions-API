@@ -11,11 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
-/**
- * Created by Juliane Maran
- *
- * @since 11/06/2025
- */
 @Component
 @RequiredArgsConstructor
 public class AccountJpaAdapter implements AccountRepositoryPort {

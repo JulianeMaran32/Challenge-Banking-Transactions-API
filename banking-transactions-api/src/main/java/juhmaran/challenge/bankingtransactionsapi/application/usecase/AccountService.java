@@ -73,9 +73,8 @@ public class AccountService implements AccountServicePort {
       } catch (Exception e) {
         logger.error("Erro ao salvar a conta '{}' durante a inicialização: {}", accountNumber, e.getMessage(), e);
       }
-    } else {
-      logger.info("Conta '{}' já existe. Pulando criação.", accountNumber);
     }
+    logger.info("Conta '{}' já existe. Pulando criação.", accountNumber);
   }
 
 }
